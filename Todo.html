@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>To-do List</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<h1>My To-Do List</h1>
+
+<div class="input-container">
+    <input type="text" id="task-input" placeholder="Enter your task"/>
+    <select id="priority">
+        <option value="High">High</option>
+        <option value="Medium" selected>Medium</option>
+        <option value="Low">Low</option>
+    </select>
+    <input type="date" id="deadline" />
+    <button class="add-btn" onclick="addTask()">Add Task</button>
+</div>
+
+<ul id="display"></ul>
+
+<script>
+  function generateId() {
+    return '_' + Math.random().toString(36).substr(2, 9);
+  }
+
+  function addTask() {
+    const input = document.getElementById("task-input").value.trim();
+    const priority = document.getElementById("priority").value;
+    const deadline = document.getElementById("deadline").value;
+
+    if (input === "") return;
+
+    let items = JSON.parse(localStorage.getItem("Items")) || [];
+
+    items.push({
+        id: generateId(),
+        text: input,
+        completed: false,
+        priority: priority,
+        deadline: deadline
+    });
+
+    localStorage.setItem("Items", JSON.stringify(items));
+    document.getElementById("task-input").value = "";
+    document.getElementById("deadline").value = "";
+    show();
+  }
+
+  function show() {
+    let items = JSON.parse(localStorage.getItem("Items")) || [];
+    const priorityOrder = { High: 1, Medium: 2, Low: 3 };
+    items.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+
+    const today = new Date().toISOString().split("T")[0];
+    let display = document.getElementById("display");
+    display.innerHTML = "";
+
+    items.forEach((element) => {
+        let li = document.createElement("li");
+        li.classList.add(element.priority.toLowerCase());
+
+        const isOverdue = !element.completed && element.deadline && element.deadline < today;
+
+        if (element.completed) {
+            li.classList.add("completed");
+        } else if (isOverdue) {
+            li.classList.add("completed"); // strike-through
+        }
+
+        let checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = element.completed;
+        checkbox.disabled = isOverdue;
+
+        checkbox.onchange = function () {
+            toggle(element.id);
+        };
+
+        let span = document.createElement("span");
+        span.textContent = element.text;
+
+        let meta = document.createElement("div");
+        meta.className = "meta";
+        meta.innerHTML = `<small>Deadline: <strong>${element.deadline || 'None'}</strong></small>`;
+
+        if (isOverdue) {
+            let overdueTag = document.createElement("span");
+            overdueTag.textContent = "❗ Not Done (Overdue)";
+            overdueTag.className = "overdue";
+            meta.appendChild(document.createElement("br"));
+            meta.appendChild(overdueTag);
+        }
+
+        let btn = document.createElement("button");
+        btn.textContent = "Delete";
+        btn.onclick = function () {
+            deleteItem(element.id);
+        };
+
+        li.appendChild(checkbox);
+        li.appendChild(span);
+        li.appendChild(meta);
+        li.appendChild(btn);
+        display.appendChild(li);
+    });
+  }
+
+  function deleteItem(id) {
+    let items = JSON.parse(localStorage.getItem("Items")) || [];
+    items = items.filter(item => item.id !== id);
+    localStorage.setItem("Items", JSON.stringify(items));
+    show();
+  }
+
+  function toggle(id) {
+    let items = JSON.parse(localStorage.getItem("Items")) || [];
+    let index = items.findIndex(item => item.id === id);
+    if (index !== -1) {
+      const today = new Date().toISOString().split("T")[0];
+      if (!items[index].completed && items[index].deadline && items[index].deadline < today) return;
+      items[index].completed = !items[index].completed;
+      localStorage.setItem("Items", JSON.stringify(items));
+      show();
+    }
+  }
+
+  show();
+</script>
+
+</body>
+</html>
